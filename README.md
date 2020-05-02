@@ -1,10 +1,12 @@
 # Any
 
-This is a implementation of [N4562](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4562.html) std::experimental::any (merged into C++17) for C++11 compilers.
+This is a implementation of [N4562](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4562.html).
+Drop-in replacement for std::any (C++17).
 
-It contains a small object optimization for objects with a size of up to 2 words (such as  `int`, `float` and `std::shared_ptr`). Storing those objects in the container will not trigger a dynamic allocation.
+It contains configurable small object optimization.
+By default storing objects with a size of up to 3 words (such as  `int`, `float`, `std::shared_ptr`, `std::string`)  in the container will not trigger a dynamic allocation.
 
-For a easy to understand documentation, see [cppreference](http://en.cppreference.com/w/cpp/experimental/any), except our namespace is `linb`.
+For a easy to understand documentation, see [cppreference](http://en.cppreference.com/w/cpp/experimental/any), except our namespace is `nonstd`.
 
 ## Defines
 
