@@ -44,26 +44,26 @@ struct regression1_type {
 };
 
 int main() {
-  using linb::any;
-  using linb::any_cast;
-  using linb::bad_any_cast;
+  using nonstd::any;
+  using nonstd::any_cast;
+  using nonstd::bad_any_cast;
 
   {
     any x = 4;
     any y = big_type();
     any z = 6;
 
-    CHECK(any().empty());
-    CHECK(!any(1).empty());
-    CHECK(!any(big_type()).empty());
+    CHECK(!any().has_value());
+    CHECK(any(1).has_value());
+    CHECK(any(big_type()).has_value());
 
-    CHECK(!x.empty() && !y.empty() && !z.empty());
-    y.clear();
-    CHECK(!x.empty() && y.empty() && !z.empty());
+    CHECK(x.has_value() && y.has_value() && z.has_value());
+    y.reset();
+    CHECK(x.has_value() && !y.has_value() && z.has_value());
     x = y;
-    CHECK(x.empty() && y.empty() && !z.empty());
+    CHECK(!x.has_value() && !y.has_value() && z.has_value());
     z = any();
-    CHECK(x.empty() && y.empty() && z.empty());
+    CHECK(!x.has_value() && !y.has_value() && !z.has_value());
   }
 
 #ifndef ANY_IMPL_NO_RTTI
@@ -185,7 +185,7 @@ int main() {
     CHECK(weak.use_count() == 3);
     p0 = 0;
     CHECK(weak.use_count() == 3);
-    p1.clear();
+    p1.reset();
     CHECK(weak.use_count() == 2);
     p2 = any(big_type());
     CHECK(weak.use_count() == 1);
@@ -206,17 +206,19 @@ int main() {
 
     // static_assert(sizeof(std::unique_ptr<big_type>) <= sizeof(void*) * 1,
     // "unique_ptr too big");
-    static_assert(sizeof(std::shared_ptr<big_type>) <= sizeof(void *) * 2,
+    static_assert(sizeof(std::shared_ptr<big_type>) <= any::STACK_STORAGE_SIZE,
                   "shared_ptr too big");
 
+    constexpr auto NUM_STACK_ALLOCABLE_WORDS =
+        any::STACK_STORAGE_SIZE / sizeof(void *);
     any i = 400;
     any f = 400.0f;
     // any unique = std::unique_ptr<big_type>(); -- must be copy constructible
     any shared = std::shared_ptr<big_type>();
     any rawptr = (void *)(nullptr);
     any big = big_type();
-    any w2 = words<2>();
-    any w3 = words<3>();
+    any w2 = words<NUM_STACK_ALLOCABLE_WORDS>();
+    any w3 = words<NUM_STACK_ALLOCABLE_WORDS + 1>();
 
     CHECK(is_stack_allocated(i, any_cast<int>(&i)));
     CHECK(is_stack_allocated(f, any_cast<float>(&f)));
@@ -226,8 +228,10 @@ int main() {
     CHECK(is_stack_allocated(shared,
                              any_cast<std::shared_ptr<big_type>>(&shared)));
     CHECK(!is_stack_allocated(big, any_cast<big_type>(&big)));
-    CHECK(is_stack_allocated(w2, any_cast<words<2>>(&w2)));
-    CHECK(!is_stack_allocated(w3, any_cast<words<3>>(&w3)));
+    CHECK(is_stack_allocated(w2,
+                             any_cast<words<NUM_STACK_ALLOCABLE_WORDS>>(&w2)));
+    CHECK(!is_stack_allocated(
+        w3, any_cast<words<NUM_STACK_ALLOCABLE_WORDS + 1>>(&w3)));
 
     // Regression test for GitHub Issue #1
     any r1 = regression1_type();
